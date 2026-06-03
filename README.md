@@ -1,4 +1,4 @@
-# AXI4-Lite Slave — SVA Verification + Gate-Level Simulation
+# AXI4 Lite Slave: SVA Verification + Gate Level Simulation
 
 > **Transistor-accurate protocol compliance, formally specified and gate-level verified.**
 
