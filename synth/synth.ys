@@ -1,0 +1,64 @@
+# =============================================================================
+#  synth.ys  —  Yosys Synthesis Script
+#  Project   : Synopsys_Projects_v2 / 02_axi4lite_sva_gls
+#
+#  Synthesizes the AXI4-Lite slave to a gate-level Verilog netlist.
+#  The netlist is then re-simulated with the same testbench (GLS) to verify
+#  that synthesis has not changed the design's observable behaviour.
+#
+#  Usage (from project root):
+#    yosys synth/synth.ys
+#
+#  Output:
+#    synth/axi4lite_slave_net.v   — flattened, post-synthesis netlist
+#    synth/synth.stat             — cell statistics
+#
+#  Flow:
+#    1. read_verilog   — parse RTL source
+#    2. hierarchy      — elaborate, check top module
+#    3. proc           — convert always blocks to logic
+#    4. opt            — constant propagation, dead-code elimination
+#    5. memory         — infer register arrays (mem[] in regfile)
+#    6. opt            — second optimisation pass
+#    7. fsm            — extract and re-encode FSMs explicitly
+#    8. opt            — clean up after FSM extraction
+#    9. techmap        — map to internal gate primitives
+#   10. opt -fast      — final optimisation
+#   11. write_verilog  — emit simulation-ready gate-level netlist
+#   12. stat           — print cell count and area estimate
+# =============================================================================
+
+# ── 1. Read source files ──────────────────────────────────────────────────────
+read_verilog -sv -noblackbox rtl/regfile.sv
+read_verilog -sv -noblackbox rtl/axi4lite_slave.sv
+
+# ── 2. Elaborate ──────────────────────────────────────────────────────────────
+hierarchy -check -top axi4lite_slave
+# Inline all parameters (creates a single fully-parameterised instance)
+
+# ── 3. RTL optimisation ───────────────────────────────────────────────────────
+proc            ;# Convert always blocks → structural logic
+opt -purge      ;# Dead-code elimination, constant folding
+memory          ;# Infer BRAM or register arrays
+opt -purge
+
+# ── 4. FSM extraction ─────────────────────────────────────────────────────────
+# Yosys recognises the enum-based write/read FSMs and can re-encode them
+# (e.g., to one-hot) for better synthesis QoR.
+fsm
+opt -purge
+
+# ── 5. Technology mapping ─────────────────────────────────────────────────────
+# Without a PDK, techmap maps to Yosys internal primitives:
+#   $_NOT_, $_AND_, $_OR_, $_MUX_, $_DFF_PN0_ (async-reset DFF), etc.
+techmap
+opt -fast
+
+# ── 6. Write gate-level netlist ───────────────────────────────────────────────
+# -noattr  : strip Yosys internal attributes (clean output)
+# -noexpr  : use explicit $_AND_ / $_NOT_ primitives instead of expressions
+#            (required so that cells_sim.v provides the behavioural models)
+write_verilog -noattr -noexpr synth/axi4lite_slave_net.v
+
+# ── 7. Statistics ─────────────────────────────────────────────────────────────
+tee -o synth/synth.stat stat
