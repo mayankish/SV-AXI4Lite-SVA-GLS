@@ -1,5 +1,7 @@
 # AXI4 Lite Slave: SVA Verification + Gate Level Simulation
 
+![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2Fmayankish%2FSV-AXI4Lite-SVA-GLS&countColor=%23263759)
+
 > **Transistor-accurate protocol compliance, formally specified and gate-level verified.**
 
 A synthesisable AXI4-Lite slave peripheral in SystemVerilog, verified at three levels: directed simulation with a clocking-accurate Bus Functional Model, formal protocol compliance via concurrent SVA properties targeting JasperGold/Questa Formal, and functional equivalence confirmed by re-simulating the post-Yosys gate-level netlist against the same testbench.
